@@ -1,0 +1,11 @@
+Name,Email,Company,Source
+Alice Johnson,alice@example.com,Acme Inc,LinkedIn
+Bob Smith,bob@startup.com,Startup Co,Webinar
+Charlie Brown,charlie@peanuts.com,Peanuts Corp,Conference
+Diana Prince,diana@wonderwoman.com,Justice League,Referral
+Invalid User,invalid-email,Test Company,LinkedIn
+Duplicate User,alice@example.com,Another Company,Twitter
+John Doe,john@newcompany.com,New Corp,Website
+Jane Smith,jane@techfirm.com,Tech Firm,LinkedIn
+Mike Wilson,mike@consulting.com,Wilson Consulting,Conference
+Sarah Davis,sarah@nonprofit.org,Help Foundation,Referral
