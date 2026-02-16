@@ -1,0 +1,14 @@
+for i in {1..5}; do
+  echo "--- Run $i ---"
+  npx ts-node src/index.ts --file leads.csv
+  echo ""
+done
+
+await expect(createLead(mockLead())).rejects.toMatchObject({
+        isAxiosError: true,
+        response: { status: 
+
+for i in $(seq 1 20); do
+  curl -s -o /dev/null -w "Request $i: HTTP %{http_code}\n" \
+    "http://localhost:3001/api/leads/lookup?email=test@test.com"
+done
