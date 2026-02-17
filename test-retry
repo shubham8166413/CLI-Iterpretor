@@ -4,9 +4,41 @@ for i in {1..5}; do
   echo ""
 done
 
-await expect(createLead(mockLead())).rejects.toMatchObject({
-        isAxiosError: true,
-        response: { status: 
+
+
+it('should NOT retry on 400 (bad request) and throw immediately', async () => {
+      const error = new Error('Bad request') as Error & { response?: { status: number }; isAxiosError?: boolean };
+      error.response = { status: 400 };
+      error.isAxiosError = true;
+
+      mockedAxios.post.mockRejectedValueOnce(error);
+
+      const newLead: Lead = {
+        name: 'Test',
+        email: 'invalid',
+        company: 'Test',
+        source: 'LinkedIn',
+      };
+
+      await expect(create(newLead)).rejects.toThrow('Bad request');
+
+      expect(mockedAxios.post).toHaveBeenCalledTimes(1);
+    });
+
+
+What was happening:
+The test was checking if create() throws an error when the API returns a 400 status.
+But Jest kept saying "Received function did not throw" even though the error WAS being thrown.
+
+The root cause:
+When you mock axios to reject with an error, you were using a plain JavaScript object:
+
+Jest's rejects.toThrow() expects a real Error instance (created with new Error()),
+not a plain object. When you throw a plain object, toThrow() doesn't recognize it as a "throw".
+
+Create an actual Error object and add the axios properties to it:
+
+
 
 for i in $(seq 1 20); do
   curl -s -o /dev/null -w "Request $i: HTTP %{http_code}\n" \
