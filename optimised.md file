@@ -1,0 +1,107 @@
+# Code Optimizations Summary
+
+## 1. src/validator.ts
+
+### What We Did:
+- **Added `isEmpty()` helper function** — Eliminates repeated `!value || value.trim() === ''` checks
+- **Created `ValidSource` type alias** — Reusable type instead of repeating `typeof VALID_SOURCES[number]`
+- **Converted to arrow functions** — `normalizeCompany` is now a concise one-liner
+- **Used conditional spread operator** — `...(isValid && { normalizedLead })` instead of separate if-block
+- **Replaced loop with `.find()`** — For duplicate detection, exits early on first match
+- **Used nullish coalescing (`??`)** — Cleaner than `|| []` for default values
+
+### Why:
+- Reduces code duplication (DRY principle)
+- Improves readability
+- Modern TypeScript patterns
+- ~27% reduction in lines of code
+
+---
+
+## 2. src/csvParser.ts
+
+### What We Did:
+- **Extracted `readFile()` function** — Single responsibility for file reading with error handling
+- **Extracted `validateHeaders()` function** — Isolated header validation logic
+- **Extracted `validateRows()` function** — Isolated row validation logic
+- **Created `mapToLead()` helper** — Converts CSV record to Lead object
+- **Used error lookup object** — `{ ENOENT: "...", EACCES: "..." }` instead of if-else chain
+- **Imported only what's needed** — `import { readFileSync }` instead of `import * as fs`
+- **Used optional chaining** — `record.Name?.trim() ?? ''` instead of `(record.Name || '').trim()`
+
+### Why:
+- Single responsibility principle — each function does one thing
+- Easier to unit test individual functions
+- Main function reads like documentation: `readFile → validateHeaders → validateRows → parse → map`
+- Extensible — easy to add new error types or validations
+
+---
+
+## 3. src/leadProcessor.ts
+
+### What We Did:
+- **Created `getErrorMessage()` helper** — Extracts error message safely from unknown errors
+- **Created `createResult()` factory** — Consistent LeadResult object creation
+- **Extracted `processOneLead()` function** — Handles single lead processing logic
+- **Extracted `handleExistingLead()` function** — Logic for updating/skipping existing leads
+- **Extracted `handleNewLead()` function** — Logic for creating new leads
+- **Created `calculateSummary()` function** — Computes summary from results array
+- **Used `.every()` for lead comparison** — `leadsAreIdentical()` now iterates over keys dynamically
+- **Removed mutable counters** — Summary calculated from results, not incremented during processing
+
+### Why:
+- Main function reduced from ~100 lines to ~15 lines
+- Reduced nesting depth from 4-5 levels to 2-3 levels
+- No mutable state for summary (functional approach)
+- Adding new fields to Lead automatically works in comparison
+- Each handler function is independently testable
+
+---
+
+## 4. src/apiClient.ts
+
+### What We Did:
+- **Created centralized `CONFIG` object** — All configuration in one place
+- **Used `Set` for retryable codes/statuses** — O(1) lookup instead of if-else chains
+- **Added `isAxiosError()` type guard** — Reusable, type-safe error checking
+- **Created `sleep()` helper** — Readable alternative to inline Promise
+- **Created `extractLead()` helper** — DRY extraction of lead from response
+- **Added generic typing to axios calls** — `axios.get<{ found: boolean; lead?: Lead }>`
+- **Used destructuring** — `const { data } = await axios.get(...)` instead of `response.data`
+- **Extended retryable statuses** — Added 502, 503, 504, ECONNRESET for better resilience
+- **Added stronger validation** — Check `typeof data !== 'object'`
+
+### Why:
+- Configuration changes require editing only one object
+- Set lookups are faster and more extensible than if-else
+- Better TypeScript inference with generic axios calls
+- More resilient to various network failures
+- ~25% reduction in lines of code
+
+---
+
+## General Patterns Applied
+
+| Pattern | Files | Benefit |
+|---------|-------|---------|
+| **Helper functions** | All | Single responsibility, testable |
+| **Arrow functions for one-liners** | All | Concise, readable |
+| **Optional chaining (`?.`)** | All | Safe property access |
+| **Nullish coalescing (`??`)** | All | Better default handling than `\|\|` |
+| **Conditional spread** | validator, processor | Clean optional properties |
+| **Set for lookups** | apiClient | O(1) performance |
+| **Factory functions** | processor | Consistent object creation |
+| **Centralized config** | apiClient | Easy maintenance |
+| **Early returns** | All | Reduced nesting |
+
+---
+
+## Metrics
+
+| File | Lines Before | Lines After | Reduction |
+|------|--------------|-------------|-----------|
+| validator.ts | ~75 | ~55 | ~27% |
+| csvParser.ts | ~70 | ~65 | ~7% |
+| leadProcessor.ts | ~180 | ~130 | ~28% |
+| apiClient.ts | ~140 | ~105 | ~25% |
+| **Total** | **~465** | **~355** | **~24%** |
