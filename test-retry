@@ -39,8 +39,56 @@ not a plain object. When you throw a plain object, toThrow() doesn't recognize i
 Create an actual Error object and add the axios properties to it:
 
 
+ERROR for apiCLient
+
+BEFROE
+return response.data as Lead;
+
+
+AFTER (lookup)
+if (response.data.found === false) {
+  return null;
+}
+return response.data.lead as Lead;  // 
+
+BEFROE: (create/update)
+return validateLeadResponse(response.data, 'create');
+
+
+AFTER (create/update (after):)
+const leadData = response.data?.lead || response.data;  // ✅ Extract .lead if present
+return validateLeadResponse(leadData, 'create');
+
+
+
+-Response parsing:
+  - lookup: GET /api/leads/lookup
+    -> Server returns: { found: boolean, lead?: Lead }
+    -> If found=false, return null
+    -> If found=true, return response.data.lead (not response.data)
+  
+  - create: POST /api/leads/create  
+    -> Server returns: { success: boolean, lead: Lead }
+    -> Return response.data.lead (not response.data)
+  
+  - update: POST /api/leads/update
+    -> Server returns: { success: boolean, lead: Lead }
+    -> Return response.data.lead (not response.data)
+
+
+
+
+
 
 for i in $(seq 1 20); do
   curl -s -o /dev/null -w "Request $i: HTTP %{http_code}\n" \
     "http://localhost:3001/api/leads/lookup?email=test@test.com"
+done
+
+
+for i in {1..20}; do 
+  curl -s -X POST "http://localhost:3001/api/leads/create" \
+    -H "Content-Type: application/json" \
+    -d "{\"name\":\"Test $i\",\"email\":\"test$i-$RANDOM@example.com\",\"company\":\"Corp\",\"source\":\"LinkedIn\"}"
+  echo ""
 done
