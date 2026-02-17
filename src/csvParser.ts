@@ -1,64 +1,91 @@
-import * as fs from "fs";
-import { parse } from "csv-parse/sync";
-import { Lead } from "./validator";
+import { readFileSync } from 'fs';
+import { parse } from 'csv-parse/sync';
+import { Lead } from './validator';
 
-const REQUIRED_HEADERS = ["Name", "Email", "Company", "Source"];
+const REQUIRED_HEADERS = ['Name', 'Email', 'Company', 'Source'] as const;
+const COLUMN_MAP: Record<string, keyof Lead> = {
+  Name: 'name',
+  Email: 'email',
+  Company: 'company',
+  Source: 'source',
+};
 
-export async function parseCSVFile(filePath: string): Promise<Lead[]> {
-  let content: string;
-
+/**
+ * Reads file content with descriptive error handling
+ */
+function readFile(filePath: string): string {
   try {
-    content = fs.readFileSync(filePath, "utf-8");
-  } catch (err: unknown) {
-    const fsError = err as NodeJS.ErrnoException;
-    if (fsError.code === "ENOENT") {
-      throw new Error(`File not found: ${filePath}`);
-    }
-    if (fsError.code === "EACCES") {
-      throw new Error(`Permission denied: ${filePath}`);
-    }
-    throw err;
+    return readFileSync(filePath, 'utf-8');
+  } catch (error: any) {
+    const errorMessages: Record<string, string> = {
+      ENOENT: `File not found: ${filePath}`,
+      EACCES: `Permission denied: ${filePath}`,
+    };
+    throw new Error(errorMessages[error.code] ?? error.message);
   }
+}
 
-  const lines = content.trim().split("\n");
-
-  if (lines.length === 0 || lines[0].trim() === "") {
-    throw new Error("Invalid CSV: missing required headers");
+/**
+ * Validates that all required headers are present
+ */
+function validateHeaders(content: string): void {
+  const headerLine = content.split('\n')[0] ?? '';
+  const headers = headerLine.split(',').map((h) => h.trim());
+  
+  const missing = REQUIRED_HEADERS.find((h) => !headers.includes(h));
+  if (missing) {
+    throw new Error(`Invalid CSV: missing required header "${missing}"`);
   }
+}
 
-  const headers = lines[0].split(",").map((h) => h.trim());
-
-  for (const required of REQUIRED_HEADERS) {
-    if (!headers.includes(required)) {
+/**
+ * Validates row column counts
+ */
+function validateRows(content: string): void {
+  const lines = content.trim().split('\n').slice(1);
+  
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === '') continue;
+    
+    const columnCount = lines[i].split(',').length;
+    if (columnCount !== REQUIRED_HEADERS.length) {
       throw new Error(
-        `Invalid CSV: missing required headers. Expected: ${REQUIRED_HEADERS.join(", ")}. Got: ${headers.join(", ")}`
+        `Malformed row ${i + 2}: expected ${REQUIRED_HEADERS.length} columns, got ${columnCount}`
       );
     }
   }
+}
 
-  let records: Record<string, string>[];
+/**
+ * Maps CSV record to Lead object
+ */
+const mapToLead = (record: Record<string, string>): Lead => ({
+  name: record.Name?.trim() ?? '',
+  email: record.Email?.trim() ?? '',
+  company: record.Company?.trim() ?? '',
+  source: record.Source?.trim() ?? '',
+});
 
+/**
+ * Parses a CSV file and returns an array of Lead objects
+ */
+export async function parseCSVFile(filePath: string): Promise<Lead[]> {
+  const content = readFile(filePath);
+  
+  // Validate structure before parsing
+  validateHeaders(content);
+  validateRows(content);
+
+  // Parse CSV
   try {
-    records = parse(content, {
+    const records = parse(content, {
       columns: true,
       skip_empty_lines: true,
       trim: true,
-      relax_column_count: false,
     });
-  } catch (err: unknown) {
-    const parseError = err as Error;
-    if (/column/i.test(parseError.message) || /field/i.test(parseError.message)) {
-      throw new Error(`Malformed CSV: column count mismatch. ${parseError.message}`);
-    }
-    throw new Error(`Malformed CSV: ${parseError.message}`);
+    
+    return records.map(mapToLead);
+  } catch (error: any) {
+    throw new Error(`Malformed CSV row: ${error.message}`);
   }
-
-  const leads: Lead[] = records.map((record) => ({
-    name: (record["Name"] ?? "").trim(),
-    email: (record["Email"] ?? "").trim(),
-    company: (record["Company"] ?? "").trim(),
-    source: (record["Source"] ?? "").trim(),
-  }));
-
-  return leads;
 }
