@@ -22,3 +22,7 @@ Output format:
 
 Run with: npx ts-node src/demo-retry.ts
 Keep under 80 lines
+
+
+
+for i in 1 2 3; do echo "=== Run $i ==="; npx ts-node src/demo-retry.ts; done
