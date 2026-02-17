@@ -1,0 +1,24 @@
+Create src/demo-retry.ts - a demonstration script showing retry logic:
+
+- Import lookup, create from apiClient
+- Import logger, Lead type
+- Create async function demonstrateRetryBehavior()
+
+Tests to run:
+1. Lookup existing lead (alice@example.com)
+2. Lookup non-existing lead 
+3. Create new lead with unique email (use Date.now())
+4. Fire 5 parallel create requests to trigger rate limits
+
+Output format:
+- Header banner explaining what server simulates (429, 500, delays)
+- Section headers for each test
+- ✅/❌ emojis for success/failure
+- Summary at end explaining:
+  - Yellow warn logs = retry attempts
+  - Exponential backoff timing
+  - Which errors retry (429, 500) vs don't (400)
+  - Max 3 retries
+
+Run with: npx ts-node src/demo-retry.ts
+Keep under 80 lines
